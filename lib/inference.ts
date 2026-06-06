@@ -10,6 +10,9 @@ export type Span = { start: number; end: number; act: string };
 type RawToken = { entity: string; word: string; index: number; score: number };
 
 const MODEL = "lucianfialho/atos-de-fala-ptbr";
+// Pin a tagged revision so returning visitors don't keep a stale cached model.
+// Bump this (and create the matching HF tag) whenever a new model is published.
+const MODEL_REVISION = "v2";
 
 let _pipe: Promise<(text: string) => Promise<RawToken[]>> | null = null;
 
@@ -29,6 +32,7 @@ export async function getPipe(
     const opts = (device: "webgpu" | "wasm") => ({
       dtype: "q8" as const,
       device,
+      revision: MODEL_REVISION,
       progress_callback: (e: unknown) => {
         const ev = e as { progress?: number } | null;
         if (ev?.progress != null) onProgress?.(Math.round(ev.progress));
