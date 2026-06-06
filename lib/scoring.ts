@@ -4,6 +4,7 @@
 export const POINTS_VOTE_BASE = 10;
 export const POINTS_SUGGESTION = 20;            // provisional, on submit
 export const POINTS_SUGGESTION_CONFIRMED = 50;  // retroactive, when adjudicator confirms
+export const POINTS_VIDEO_ANNOTATION = 15;      // per utterance annotated while watching a video
 
 export type Stats = { points: number; streak: number; reliability: number; itemsDone: number };
 

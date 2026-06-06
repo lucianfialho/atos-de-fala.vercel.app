@@ -8,6 +8,9 @@ export default function Nav() {
           atos de fala
         </a>
         <div className="lp-nav-actions">
+          <a href="/assistir" className="lp-nav-painel">
+            Vídeo
+          </a>
           <a href="/sobre" className="lp-nav-painel">
             Sobre
           </a>

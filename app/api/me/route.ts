@@ -6,5 +6,6 @@ export async function GET(req: Request) {
   if (!participant) return NextResponse.json({ error: "participant required" }, { status: 400 });
   const rows = (await sql`select points, streak, reliability, items_done
                           from participant_stats where participant_id = ${participant}`) as any[];
-  return NextResponse.json(rows[0] ?? { points: 0, streak: 0, reliability: 0.5, items_done: 0 });
+  const stats = rows[0] ?? { points: 0, streak: 0, reliability: 0.5, items_done: 0 };
+  return NextResponse.json({ ...stats, registered: rows.length > 0 });
 }
