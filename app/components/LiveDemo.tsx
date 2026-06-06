@@ -16,48 +16,192 @@ const STATIC_SEGMENTS: Segment[] = [
   { text: "Obrigado.", act: "agradecer" },
 ];
 
+// ---------------------------------------------------------------------------
+// Model singleton — loaded on demand, once per browser session
+// ---------------------------------------------------------------------------
+
+// Each token returned by Transformers.js token-classification
+type RawToken = {
+  entity: string;
+  word: string;
+  start: number;
+  end: number;
+  score: number;
+  index: number;
+};
+
+let _pipe: Promise<(text: string) => Promise<RawToken[]>> | null = null;
+
+async function getPipe(
+  onProgress: (p: number) => void
+): Promise<(text: string) => Promise<RawToken[]>> {
+  if (_pipe) return _pipe;
+
+  _pipe = (async () => {
+    const { pipeline, env } = await import("@huggingface/transformers");
+
+    // Disable local model cache in browser (use HF CDN directly)
+    env.allowLocalModels = false;
+
+    const opts = (device: "webgpu" | "wasm") => ({
+      dtype: "q8" as const,
+      device,
+      progress_callback: (e: unknown) => {
+        const ev = e as { progress?: number } | null;
+        if (ev?.progress != null) onProgress(Math.round(ev.progress));
+      },
+    });
+
+    try {
+      return (await pipeline(
+        "token-classification",
+        "lucianfialho/atos-de-fala-ptbr",
+        opts("webgpu")
+      )) as unknown as (text: string) => Promise<RawToken[]>;
+    } catch {
+      return (await pipeline(
+        "token-classification",
+        "lucianfialho/atos-de-fala-ptbr",
+        opts("wasm")
+      )) as unknown as (text: string) => Promise<RawToken[]>;
+    }
+  })();
+
+  return _pipe;
+}
+
+// ---------------------------------------------------------------------------
+// Token → Segment decoder
+// ---------------------------------------------------------------------------
+
+function decodeSegments(raw: RawToken[], text: string): Segment[] {
+  // Collect non-O spans, merging adjacent tokens that share the same act
+  const spans: { start: number; end: number; act: string }[] = [];
+
+  for (const tok of raw) {
+    if (!tok.entity || tok.entity === "O") continue;
+    // Entity tags are BIOES-style: "B-pedir", "I-pedir", "E-pedir", "S-pedir"
+    const parts = tok.entity.split("-");
+    const act = parts.length > 1 ? parts.slice(1).join("-") : parts[0];
+
+    const last = spans[spans.length - 1];
+    if (last && last.act === act && tok.start <= last.end + 1) {
+      // extend the previous span
+      last.end = tok.end;
+    } else {
+      spans.push({ start: tok.start, end: tok.end, act });
+    }
+  }
+
+  // Build display segments covering the full text
+  const segments: Segment[] = [];
+  let cursor = 0;
+
+  for (const span of spans.sort((a, b) => a.start - b.start)) {
+    if (span.start > cursor) {
+      segments.push({ text: text.slice(cursor, span.start), act: null });
+    }
+    segments.push({ text: text.slice(span.start, span.end), act: span.act });
+    cursor = span.end;
+  }
+  if (cursor < text.length) {
+    segments.push({ text: text.slice(cursor), act: null });
+  }
+
+  return segments.filter((s) => s.text.length > 0);
+}
+
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
+
+type InferStatus = "idle" | "loading-model" | "running" | "done";
+
 export default function LiveDemo() {
   const [inputText, setInputText] = useState(DEFAULT_INPUT);
   const [segments, setSegments] = useState<Segment[]>(STATIC_SEGMENTS);
-  const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState<InferStatus>("idle");
+  const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [usedFallback, setUsedFallback] = useState(false);
 
+  const loading = status === "loading-model" || status === "running";
   const hasPedir = segments.some((s) => s.act === "pedir");
 
+  // -------------------------------------------------------------------------
+  // Server-side fallback (Hugging Face Space proxy via /api/demo)
+  // -------------------------------------------------------------------------
+  async function annotateFallback(text: string): Promise<void> {
+    const res = await fetch("/api/demo", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text }),
+    });
+    if (res.status === 503) {
+      setError("coldstart");
+      return;
+    }
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setError(data.error ?? "não consegui anotar agora");
+      return;
+    }
+    const data = await res.json();
+    if (data.segments && Array.isArray(data.segments)) {
+      setSegments(data.segments as Segment[]);
+      setUsedFallback(true);
+      setError(null);
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Main annotate — tries in-browser first, falls back to server
+  // -------------------------------------------------------------------------
   async function annotate() {
     if (!inputText.trim() || loading) return;
-    setLoading(true);
     setError(null);
+    setUsedFallback(false);
+    setProgress(0);
+    setStatus("loading-model");
+
     try {
-      const res = await fetch("/api/demo", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: inputText }),
+      const pipe = await getPipe((p) => {
+        setProgress(p);
       });
-      if (res.status === 503) {
-        setError("coldstart");
-        // keep last good annotation — do not update segments
-        return;
+
+      setStatus("running");
+      const raw = await pipe(inputText);
+      const segs = decodeSegments(raw, inputText);
+      setSegments(segs.length > 0 ? segs : [{ text: inputText, act: null }]);
+      setStatus("done");
+    } catch (err) {
+      // Transformers.js failed entirely — fall back to server proxy
+      console.warn("[LiveDemo] in-browser inference failed, falling back to server:", err);
+      _pipe = null; // reset so next attempt re-tries
+      setStatus("running");
+      try {
+        await annotateFallback(inputText);
+      } catch {
+        setError("não consegui anotar agora");
       }
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        setError(data.error ?? "não consegui anotar agora");
-        return;
-      }
-      const data = await res.json();
-      if (data.segments && Array.isArray(data.segments)) {
-        setSegments(data.segments as Segment[]);
-        setError(null);
-      }
-    } catch {
-      setError("não consegui anotar agora");
-    } finally {
-      setLoading(false);
+      setStatus("done");
     }
   }
 
   function handleKey(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === "Enter") annotate();
+  }
+
+  // -------------------------------------------------------------------------
+  // Button label
+  // -------------------------------------------------------------------------
+  let btnLabel = "anotar (roda no seu navegador)";
+  if (status === "loading-model") {
+    btnLabel = progress > 0
+      ? `baixando o modelo… ${progress}%`
+      : "baixando o modelo (~110MB, só na 1ª vez)…";
+  } else if (status === "running") {
+    btnLabel = "anotando…";
   }
 
   return (
@@ -86,9 +230,37 @@ export default function LiveDemo() {
           disabled={loading || !inputText.trim()}
           aria-busy={loading}
         >
-          {loading ? "anotando…" : "anotar"}
+          {btnLabel}
         </button>
       </div>
+
+      {/* Loading progress bar when downloading model */}
+      {status === "loading-model" && progress > 0 && (
+        <div
+          role="progressbar"
+          aria-valuenow={progress}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label="Progresso do download do modelo"
+          style={{
+            height: 3,
+            background: "#f0e9d8",
+            borderRadius: 2,
+            marginTop: 6,
+            overflow: "hidden",
+          }}
+        >
+          <div
+            style={{
+              height: "100%",
+              width: `${progress}%`,
+              background: "var(--ink, #1a1a1a)",
+              borderRadius: 2,
+              transition: "width 0.2s ease",
+            }}
+          />
+        </div>
+      )}
 
       {/* Error / cold-start notice */}
       {error === "coldstart" && (
@@ -99,6 +271,13 @@ export default function LiveDemo() {
       {error && error !== "coldstart" && (
         <p className="live-demo-notice live-demo-notice-error" role="alert">
           {error}
+        </p>
+      )}
+
+      {/* Fallback notice */}
+      {usedFallback && !error && (
+        <p className="live-demo-notice" role="status" style={{ fontSize: 12, opacity: 0.6 }}>
+          rodou no servidor (WebGPU/wasm indisponível neste navegador)
         </p>
       )}
 
