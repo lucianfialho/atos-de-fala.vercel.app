@@ -91,9 +91,58 @@ export function spansToSegments(spans: Span[], text: string): { text: string; ac
   return segments.filter((seg) => seg.text.length > 0);
 }
 
+// BERTimbau caps at 512 positions. Keep chunks well under that (chars ≈ a few per token),
+// preferring sentence/space boundaries, so long transcript turns don't overflow the model.
+const MAX_CHARS = 600;
+
+function splitChunks(text: string): { text: string; offset: number }[] {
+  if (text.length <= MAX_CHARS) return [{ text, offset: 0 }];
+  const chunks: { text: string; offset: number }[] = [];
+  let i = 0;
+  while (i < text.length) {
+    let end = Math.min(i + MAX_CHARS, text.length);
+    if (end < text.length) {
+      const slice = text.slice(i, end);
+      const dot = slice.lastIndexOf(". ");
+      const sp = slice.lastIndexOf(" ");
+      const cut = dot > 50 ? dot + 1 : sp > 50 ? sp : slice.length;
+      end = i + cut;
+    }
+    chunks.push({ text: text.slice(i, end), offset: i });
+    i = end;
+  }
+  return chunks;
+}
+
+function mergeAdjacent(spans: Span[]): Span[] {
+  const sorted = [...spans].sort((a, b) => a.start - b.start);
+  const out: Span[] = [];
+  for (const s of sorted) {
+    const last = out[out.length - 1];
+    if (last && last.act === s.act && s.start <= last.end + 1) last.end = Math.max(last.end, s.end);
+    else out.push({ ...s });
+  }
+  return out;
+}
+
+// Annotate arbitrarily long text by chunking under the model's token limit.
+export async function annotateChunked(
+  pipe: (text: string) => Promise<RawToken[]>,
+  text: string
+): Promise<Span[]> {
+  const all: Span[] = [];
+  for (const chunk of splitChunks(text)) {
+    if (!chunk.text.trim()) continue;
+    const raw = await pipe(chunk.text);
+    for (const s of tokensToSpans(raw, chunk.text)) {
+      all.push({ start: s.start + chunk.offset, end: s.end + chunk.offset, act: s.act });
+    }
+  }
+  return mergeAdjacent(all);
+}
+
 // Run the model on one text and return character spans.
 export async function annotate(text: string, onProgress?: (p: number) => void): Promise<Span[]> {
   const pipe = await getPipe(onProgress);
-  const raw = await pipe(text);
-  return tokensToSpans(raw, text);
+  return annotateChunked(pipe, text);
 }

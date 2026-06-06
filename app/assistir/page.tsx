@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { getOrCreateParticipantId } from "@/lib/participant";
-import { getPipe, tokensToSpans } from "@/lib/inference";
+import { getPipe, annotateChunked } from "@/lib/inference";
 import Nav from "@/app/components/Nav";
 import Footer from "@/app/components/Footer";
 import OnboardingForm from "@/app/components/OnboardingForm";
@@ -11,8 +11,8 @@ import TurnCard, { SpanState } from "./TurnCard";
 type Turn = { speaker: string; text: string };
 type Interview = { title: string; turns: Turn[]; sourceRef: string };
 
-const CATALOG = [
-  { name: "Mano Brown (2007)", url: "https://rodaviva.fapesp.br/materia/470/entrevistados/mano_brown_2007.htm" },
+const CATALOG: { name: string; url: string; youtubeId?: string }[] = [
+  { name: "Mano Brown (2007)", url: "https://rodaviva.fapesp.br/materia/470/entrevistados/mano_brown_2007.htm", youtubeId: "IaQWmNkqkSg" },
   { name: "Pierre Lévy (2001)", url: "https://rodaviva.fapesp.br/materia/47/entrevistados/pierre_levy_2001.htm" },
 ];
 
@@ -29,6 +29,7 @@ export default function Assistir() {
 
   const [urlInput, setUrlInput] = useState("");
   const [interview, setInterview] = useState<Interview | null>(null);
+  const [videoId, setVideoId] = useState<string | null>(null);
   const [loadErr, setLoadErr] = useState("");
   const [loadingIv, setLoadingIv] = useState(false);
 
@@ -51,10 +52,11 @@ export default function Assistir() {
     setRegistered(true);
   }
 
-  async function loadInterview(url: string) {
+  async function loadInterview(url: string, youtubeId?: string) {
     setLoadErr("");
     setLoadingIv(true);
     setInterview(null);
+    setVideoId(youtubeId ?? null);
     setSpansByTurn({});
     setModelStatus("idle");
     try {
@@ -78,8 +80,7 @@ export default function Assistir() {
       for (let i = 0; i < interview.turns.length; i++) {
         setAnalyzingIdx(i);
         try {
-          const raw = await pipe(interview.turns[i].text);
-          const spans = tokensToSpans(raw, interview.turns[i].text);
+          const spans = await annotateChunked(pipe, interview.turns[i].text);
           const states: SpanState[] = spans.map((s) => ({ ...s, modelAct: s.act, status: "pending" }));
           setSpansByTurn((prev) => ({ ...prev, [i]: states }));
         } catch {
@@ -195,8 +196,8 @@ export default function Assistir() {
 
         <div className="assistir-catalog">
           {CATALOG.map((c) => (
-            <button key={c.url} className="btn-outline assistir-cat-btn" onClick={() => loadInterview(c.url)}>
-              {c.name}
+            <button key={c.url} className="btn-outline assistir-cat-btn" onClick={() => loadInterview(c.url, c.youtubeId)}>
+              {c.name}{c.youtubeId ? " 🎬" : ""}
             </button>
           ))}
         </div>
@@ -238,20 +239,35 @@ export default function Assistir() {
               {modelStatus === "done" && <span className="assistir-iv-meta">✓ anotado — corrija à vontade</span>}
             </div>
 
-            <div className="assistir-transcript">
-              {interview.turns.map((t, i) => (
-                <TurnCard
-                  key={i}
-                  speaker={t.speaker}
-                  text={t.text}
-                  spans={spansByTurn[i]}
-                  analyzing={analyzingIdx === i}
-                  onConfirm={(s) => handleConfirm(i, s)}
-                  onCorrect={(s, a) => handleCorrect(i, s, a)}
-                  onRemove={(s) => handleRemove(i, s)}
-                  onAdd={(s, e, a) => handleAdd(i, s, e, a)}
-                />
-              ))}
+            <div className={videoId ? "assistir-watch" : ""}>
+              {videoId && (
+                <div className="assistir-video-col">
+                  <div className="yt-embed">
+                    <iframe
+                      src={`https://www.youtube.com/embed/${videoId}`}
+                      title="Vídeo da entrevista"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    />
+                  </div>
+                  <p className="assistir-video-note">o vídeo é só pra você ouvir o tom — a anotação é no texto ao lado</p>
+                </div>
+              )}
+              <div className="assistir-transcript">
+                {interview.turns.map((t, i) => (
+                  <TurnCard
+                    key={i}
+                    speaker={t.speaker}
+                    text={t.text}
+                    spans={spansByTurn[i]}
+                    analyzing={analyzingIdx === i}
+                    onConfirm={(s) => handleConfirm(i, s)}
+                    onCorrect={(s, a) => handleCorrect(i, s, a)}
+                    onRemove={(s) => handleRemove(i, s)}
+                    onAdd={(s, e, a) => handleAdd(i, s, e, a)}
+                  />
+                ))}
+              </div>
             </div>
           </>
         )}
