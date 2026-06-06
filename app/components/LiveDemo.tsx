@@ -285,31 +285,50 @@ export default function LiveDemo() {
         </p>
       )}
 
-      {/* Annotated sentence — renders inline as a reading-flow sentence */}
-      <div className="live-demo-sentence">
+      {/* Annotated sentence — reads as one natural sentence, acts shown as
+          colored underlines so the reading flow isn't chopped up */}
+      <p className="live-demo-sentence">
         {segments.map((seg, i) => {
           if (!seg.act) {
-            return <span key={i} className="live-demo-plain">{seg.text}</span>;
+            return <span key={i}>{seg.text}</span>;
           }
           const tint = getActTint(seg.act);
           return (
-            <span key={i} className="live-demo-seg">
-              <span
-                className="live-demo-seg-text"
-                style={{ ["--act-line" as string]: tint.text }}
-              >
-                {seg.text}
-              </span>
-              <span
-                className="live-demo-pill"
-                style={{ background: tint.bg, color: tint.text, borderColor: tint.border }}
-              >
-                {seg.act}
-              </span>
+            <span
+              key={i}
+              className="live-demo-mark"
+              style={{ ["--act-line" as string]: tint.text }}
+            >
+              {seg.text}
             </span>
           );
         })}
-      </div>
+      </p>
+
+      {/* Legend — each annotated trecho mapped to its act, tied by color */}
+      <ul className="live-demo-legend">
+        {segments
+          .filter((s) => s.act)
+          .map((seg, i) => {
+            const tint = getActTint(seg.act as string);
+            return (
+              <li key={i} className="live-demo-legend-item">
+                <span
+                  className="live-demo-pill"
+                  style={{ background: tint.bg, color: tint.text, borderColor: tint.border }}
+                >
+                  {seg.act}
+                </span>
+                <span
+                  className="live-demo-legend-text"
+                  style={{ ["--act-line" as string]: tint.text }}
+                >
+                  {seg.text}
+                </span>
+              </li>
+            );
+          })}
+      </ul>
 
       {/* Raw model response — collapsible, so people can inspect the output */}
       {rawOutput != null && (

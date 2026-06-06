@@ -1096,52 +1096,64 @@ input.field-input:focus {
 
 /* ── Live demo annotated sentence ────────────────────────────────── */
 .live-demo-sentence {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 4px 0;
-  line-height: 2.2;
-}
-
-.live-demo-plain {
-  font-size: 17px;
-  color: var(--ink);
-  font-weight: 500;
-  white-space: pre;
-}
-
-.live-demo-seg {
-  display: inline-flex;
-  flex-direction: column;
-  align-items: flex-start;
-  position: relative;
-  margin-right: 4px;
-}
-
-.live-demo-seg-text {
-  font-size: 17px;
+  margin: 4px 0 0;
+  font-size: 18px;
   font-weight: 500;
   color: var(--ink);
-  line-height: 1.5;
-  /* colored act underline via gradient */
+  line-height: 1.85;
+}
+
+/* Annotated span inside the flowing sentence — colored underline only */
+.live-demo-mark {
   background-image: linear-gradient(var(--act-line), var(--act-line));
   background-repeat: no-repeat;
   background-position: 0 100%;
   background-size: 100% 2.5px;
-  padding-bottom: 3px;
+  padding-bottom: 2px;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+/* ── Live demo legend (trecho → ato) ─────────────────────────────── */
+.live-demo-legend {
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 14px 0 0;
+  border-top: 1px solid var(--hairline, #e3e0d4);
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.live-demo-legend-item {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.live-demo-legend-text {
+  font-size: 14px;
+  color: var(--ink);
+  line-height: 1.4;
+  background-image: linear-gradient(var(--act-line), var(--act-line));
+  background-repeat: no-repeat;
+  background-position: 0 100%;
+  background-size: 100% 2px;
+  padding-bottom: 1px;
 }
 
 .live-demo-pill {
+  flex-shrink: 0;
   display: inline-block;
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: lowercase;
-  padding: 1px 7px;
+  padding: 2px 8px;
   border-radius: 9999px;
   border: 1px solid transparent;
-  margin-top: 3px;
-  align-self: flex-start;
+  min-width: 74px;
+  text-align: center;
 }
 
 /* ── Responsive ───────────────────────────────────────────────────── */
