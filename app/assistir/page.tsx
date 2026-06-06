@@ -15,10 +15,10 @@ type Interview = { title: string; turns: Turn[]; sourceRef: string };
 // (measured) + blind on the social acts. Each interview is picked to be rich in those.
 const CATALOG: { name: string; url: string; youtubeId?: string; focus: string }[] = [
   { name: "Mano Brown (2007)", url: "https://rodaviva.fapesp.br/materia/470/entrevistados/mano_brown_2007.htm", youtubeId: "IaQWmNkqkSg", focus: "discordar · expressar_emocao · pedir" },
-  { name: "Elza Soares (2002)", url: "https://rodaviva.fapesp.br/materia/74/entrevistados/elza_soares_2002.htm", focus: "expressar_emocao" },
+  { name: "Elza Soares (2002)", url: "https://rodaviva.fapesp.br/materia/74/entrevistados/elza_soares_2002.htm", youtubeId: "8ko447IATMk", focus: "expressar_emocao" },
   { name: "Mário Soares (1993)", url: "https://rodaviva.fapesp.br/materia/798/entrevistados/mario_soares_1993.htm", focus: "discordar · prometer" },
-  { name: "Fidel Castro (1990)", url: "https://rodaviva.fapesp.br/materia/1/entrevistados/fidel_castro_1990.htm", focus: "discordar · prometer" },
-  { name: "Pierre Lévy (2001)", url: "https://rodaviva.fapesp.br/materia/47/entrevistados/pierre_levy_2001.htm", focus: "informar · sugerir" },
+  { name: "Fidel Castro (1990)", url: "https://rodaviva.fapesp.br/materia/1/entrevistados/fidel_castro_1990.htm", youtubeId: "znY9e1AFCvc", focus: "discordar · prometer" },
+  { name: "Pierre Lévy (2001)", url: "https://rodaviva.fapesp.br/materia/47/entrevistados/pierre_levy_2001.htm", youtubeId: "DzfKr2nUj8k", focus: "informar · sugerir" },
 ];
 
 const SOURCE = "rodaviva";
