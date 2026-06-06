@@ -124,6 +124,7 @@ export default function LiveDemo() {
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [usedFallback, setUsedFallback] = useState(false);
+  const [rawOutput, setRawOutput] = useState<unknown>(null);
 
   const loading = status === "loading-model" || status === "running";
   const hasPedir = segments.some((s) => s.act === "pedir");
@@ -149,6 +150,7 @@ export default function LiveDemo() {
     const data = await res.json();
     if (data.segments && Array.isArray(data.segments)) {
       setSegments(data.segments as Segment[]);
+      setRawOutput(data);
       setUsedFallback(true);
       setError(null);
     }
@@ -161,6 +163,7 @@ export default function LiveDemo() {
     if (!inputText.trim() || loading) return;
     setError(null);
     setUsedFallback(false);
+    setRawOutput(null);
     setProgress(0);
     setStatus("loading-model");
 
@@ -173,6 +176,7 @@ export default function LiveDemo() {
       const raw = await pipe(inputText);
       const segs = decodeSegments(raw, inputText);
       setSegments(segs.length > 0 ? segs : [{ text: inputText, act: null }]);
+      setRawOutput(raw);
       setStatus("done");
     } catch (err) {
       // Transformers.js failed entirely — fall back to server proxy
@@ -306,6 +310,18 @@ export default function LiveDemo() {
           );
         })}
       </div>
+
+      {/* Raw model response — collapsible, so people can inspect the output */}
+      {rawOutput != null && (
+        <details className="live-demo-raw">
+          <summary className="live-demo-raw-summary">
+            ver resposta crua (JSON{usedFallback ? "" : " — saída do modelo no navegador"})
+          </summary>
+          <pre className="live-demo-raw-pre">
+            <code>{JSON.stringify(rawOutput, null, 2)}</code>
+          </pre>
+        </details>
+      )}
 
       {/* Hand-drawn arrow + note — shown when a "pedir" segment is present */}
       {hasPedir && (

@@ -1044,6 +1044,56 @@ input.field-input:focus {
   font-style: normal;
 }
 
+/* ── Live demo raw JSON viewer ───────────────────────────────────── */
+.live-demo-raw {
+  margin-top: 14px;
+  border-top: 1px solid var(--hairline, #e3e0d4);
+  padding-top: 10px;
+}
+
+.live-demo-raw-summary {
+  font-size: 12px;
+  color: var(--muted);
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.live-demo-raw-summary::-webkit-details-marker {
+  display: none;
+}
+
+.live-demo-raw-summary::before {
+  content: "▸";
+  font-size: 10px;
+  transition: transform 0.15s ease;
+}
+
+.live-demo-raw[open] .live-demo-raw-summary::before {
+  transform: rotate(90deg);
+}
+
+.live-demo-raw-summary:hover {
+  color: var(--ink);
+}
+
+.live-demo-raw-pre {
+  margin: 10px 0 0;
+  padding: 12px 14px;
+  background: #1a1a1a;
+  color: #e8e6df;
+  border-radius: 6px;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 11.5px;
+  line-height: 1.55;
+  overflow-x: auto;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
 /* ── Live demo annotated sentence ────────────────────────────────── */
 .live-demo-sentence {
   display: flex;
