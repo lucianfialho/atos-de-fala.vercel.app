@@ -1,4 +1,4 @@
-// Mirror of src/chomsky/collect/score.py — keep values identical so client display and
+// Mirror of src/atos/collect/score.py — keep values identical so client display and
 // server-side stats agree with the Python aggregation. Suggestions never penalize.
 
 export const POINTS_VOTE_BASE = 10;
