@@ -199,11 +199,9 @@ export default function LiveDemo() {
   // -------------------------------------------------------------------------
   // Button label
   // -------------------------------------------------------------------------
-  let btnLabel = "anotar (roda no seu navegador)";
+  let btnLabel = "anotar";
   if (status === "loading-model") {
-    btnLabel = progress > 0
-      ? `baixando o modelo… ${progress}%`
-      : "baixando o modelo (~110MB, só na 1ª vez)…";
+    btnLabel = progress > 0 ? `baixando… ${progress}%` : "baixando o modelo…";
   } else if (status === "running") {
     btnLabel = "anotando…";
   }
@@ -215,7 +213,7 @@ export default function LiveDemo() {
         <span className="demo-card-filename">o nosso modelo anotou:</span>
       </figcaption>
 
-      {/* Input row */}
+      {/* Input on its own line, chat-style; action row below */}
       <div className="live-demo-input-row">
         <input
           className="live-demo-input"
@@ -224,18 +222,21 @@ export default function LiveDemo() {
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
           onKeyDown={handleKey}
-          placeholder="Digite uma frase…"
+          placeholder="Escreva uma frase e veja os atos de fala…"
           aria-label="Frase para anotar"
           disabled={loading}
         />
-        <button
-          className="btn-ink live-demo-btn"
-          onClick={annotate}
-          disabled={loading || !inputText.trim()}
-          aria-busy={loading}
-        >
-          {btnLabel}
-        </button>
+        <div className="live-demo-actions">
+          <span className="live-demo-hint">roda no seu navegador — nada vai pro servidor</span>
+          <button
+            className="btn-ink live-demo-btn"
+            onClick={annotate}
+            disabled={loading || !inputText.trim()}
+            aria-busy={loading}
+          >
+            {btnLabel}
+          </button>
+        </div>
       </div>
 
       {/* Loading progress bar when downloading model */}
