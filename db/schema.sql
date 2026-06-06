@@ -13,6 +13,7 @@ create table if not exists item (
   text         text not null,
   source       text not null default 'synthetic',   -- 'synthetic' | 'news'
   is_honeypot  boolean not null default false,
+  priority     double precision not null default 0, -- active-learning triage (atos.collect score)
   created_at   timestamptz not null default now()
 );
 
@@ -82,7 +83,11 @@ create table if not exists rate_hit (
   created_at  timestamptz not null default now()
 );
 
+-- idempotent: add active-learning priority to pre-existing item tables
+alter table item add column if not exists priority double precision not null default 0;
+
 create index if not exists idx_vote_span on vote(item_span_id);
+create index if not exists idx_item_priority on item (priority desc);
 create index if not exists idx_span_item on item_span(item_id);
 create index if not exists idx_suggestion_status on suggestion(status);
 create index if not exists idx_rate_hit_bucket_time on rate_hit(bucket, created_at);

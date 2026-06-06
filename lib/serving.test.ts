@@ -1,7 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { pickNextItem, Candidate } from "./serving";
 
-const c = (id: number, isHoneypot: boolean, voteCount: number): Candidate => ({ id, isHoneypot, voteCount });
+const c = (id: number, isHoneypot: boolean, voteCount: number, priority?: number): Candidate =>
+  ({ id, isHoneypot, voteCount, priority });
 
 describe("pickNextItem", () => {
   it("returns null when no candidates", () => {
@@ -33,5 +34,26 @@ describe("pickNextItem", () => {
     expect(picked.has(9)).toBe(false);            // never the higher-voted one
     expect([...picked].every((id) => id !== 9)).toBe(true);
     expect(picked.size).toBeGreaterThan(1);       // genuinely randomized across the tie band
+  });
+
+  it("exploit path serves the highest-priority item even if it has more votes", () => {
+    // id 2 has more votes but higher priority -> chosen when exploiting (epsilon=0)
+    const got = pickNextItem([c(1, false, 0, 0.1), c(2, false, 9, 0.9)], 0, 0);
+    expect(got!.id).toBe(2);
+  });
+
+  it("breaks priority ties by fewest votes", () => {
+    const got = pickNextItem([c(1, false, 5, 0.8), c(2, false, 1, 0.8)], 0, 0);
+    expect(got!.id).toBe(2);
+  });
+
+  it("explore path (epsilon=1) ignores priority and uses fewest votes", () => {
+    const got = pickNextItem([c(1, false, 0, 0.1), c(2, false, 9, 0.9)], 0, 1);
+    expect(got!.id).toBe(1); // fewest votes wins when exploring
+  });
+
+  it("no priority data behaves like fewest-votes (back-compat)", () => {
+    const got = pickNextItem([c(1, false, 5), c(2, false, 1)], 0, 0);
+    expect(got!.id).toBe(2);
   });
 });
