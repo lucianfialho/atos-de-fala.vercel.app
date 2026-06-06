@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { getActTint } from "@/lib/actColors";
+import { getPipe, tokensToSpans, spansToSegments } from "@/lib/inference";
 import { Arrow } from "@/app/components/marks";
 
 type Segment = { text: string; act: string | null };
@@ -15,101 +16,6 @@ const STATIC_SEGMENTS: Segment[] = [
   { text: " ", act: null },
   { text: "Obrigado.", act: "agradecer" },
 ];
-
-// ---------------------------------------------------------------------------
-// Model singleton — loaded on demand, once per browser session
-// ---------------------------------------------------------------------------
-
-// Each token returned by Transformers.js token-classification
-type RawToken = {
-  entity: string;
-  word: string;
-  start: number;
-  end: number;
-  score: number;
-  index: number;
-};
-
-let _pipe: Promise<(text: string) => Promise<RawToken[]>> | null = null;
-
-async function getPipe(
-  onProgress: (p: number) => void
-): Promise<(text: string) => Promise<RawToken[]>> {
-  if (_pipe) return _pipe;
-
-  _pipe = (async () => {
-    const { pipeline, env } = await import("@huggingface/transformers");
-
-    // Disable local model cache in browser (use HF CDN directly)
-    env.allowLocalModels = false;
-
-    const opts = (device: "webgpu" | "wasm") => ({
-      dtype: "q8" as const,
-      device,
-      progress_callback: (e: unknown) => {
-        const ev = e as { progress?: number } | null;
-        if (ev?.progress != null) onProgress(Math.round(ev.progress));
-      },
-    });
-
-    try {
-      return (await pipeline(
-        "token-classification",
-        "lucianfialho/atos-de-fala-ptbr",
-        opts("webgpu")
-      )) as unknown as (text: string) => Promise<RawToken[]>;
-    } catch {
-      return (await pipeline(
-        "token-classification",
-        "lucianfialho/atos-de-fala-ptbr",
-        opts("wasm")
-      )) as unknown as (text: string) => Promise<RawToken[]>;
-    }
-  })();
-
-  return _pipe;
-}
-
-// ---------------------------------------------------------------------------
-// Token → Segment decoder
-// ---------------------------------------------------------------------------
-
-function decodeSegments(raw: RawToken[], text: string): Segment[] {
-  // Collect non-O spans, merging adjacent tokens that share the same act
-  const spans: { start: number; end: number; act: string }[] = [];
-
-  for (const tok of raw) {
-    if (!tok.entity || tok.entity === "O") continue;
-    // Entity tags are BIOES-style: "B-pedir", "I-pedir", "E-pedir", "S-pedir"
-    const parts = tok.entity.split("-");
-    const act = parts.length > 1 ? parts.slice(1).join("-") : parts[0];
-
-    const last = spans[spans.length - 1];
-    if (last && last.act === act && tok.start <= last.end + 1) {
-      // extend the previous span
-      last.end = tok.end;
-    } else {
-      spans.push({ start: tok.start, end: tok.end, act });
-    }
-  }
-
-  // Build display segments covering the full text
-  const segments: Segment[] = [];
-  let cursor = 0;
-
-  for (const span of spans.sort((a, b) => a.start - b.start)) {
-    if (span.start > cursor) {
-      segments.push({ text: text.slice(cursor, span.start), act: null });
-    }
-    segments.push({ text: text.slice(span.start, span.end), act: span.act });
-    cursor = span.end;
-  }
-  if (cursor < text.length) {
-    segments.push({ text: text.slice(cursor), act: null });
-  }
-
-  return segments.filter((s) => s.text.length > 0);
-}
 
 // ---------------------------------------------------------------------------
 // Component
@@ -174,14 +80,14 @@ export default function LiveDemo() {
 
       setStatus("running");
       const raw = await pipe(inputText);
-      const segs = decodeSegments(raw, inputText);
+      const spans = tokensToSpans(raw, inputText);
+      const segs = spansToSegments(spans, inputText);
       setSegments(segs.length > 0 ? segs : [{ text: inputText, act: null }]);
       setRawOutput(raw);
       setStatus("done");
     } catch (err) {
       // Transformers.js failed entirely — fall back to server proxy
       console.warn("[LiveDemo] in-browser inference failed, falling back to server:", err);
-      _pipe = null; // reset so next attempt re-tries
       setStatus("running");
       try {
         await annotateFallback(inputText);
