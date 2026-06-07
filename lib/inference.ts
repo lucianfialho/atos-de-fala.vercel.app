@@ -12,7 +12,7 @@ type RawToken = { entity: string; word: string; index: number; score: number };
 const MODEL = "lucianfialho/atos-de-fala-ptbr";
 // Pin a tagged revision so returning visitors don't keep a stale cached model.
 // Bump this (and create the matching HF tag) whenever a new model is published.
-const MODEL_REVISION = "v2";
+const MODEL_REVISION = "v3";
 
 let _pipe: Promise<(text: string) => Promise<RawToken[]>> | null = null;
 
