@@ -6,6 +6,7 @@ import InlineSentence from "./components/InlineSentence";
 import Tutorial, { hasSeen } from "./components/Tutorial";
 import GameHeader from "./components/GameHeader";
 import EmptyState from "./components/EmptyState";
+import DomainFilter from "./components/DomainFilter";
 
 type Span = { id: number; char_start: number; char_end: number; ai_act: string };
 type Item = { id: number; text: string; spans: Span[] };
@@ -14,6 +15,7 @@ type VerdictMap = Record<number, VerdictState>;
 
 export default function Jogar() {
   const [pid, setPid] = useState<string>("");
+  const [domain, setDomain] = useState<string>("");
   const [item, setItem] = useState<Item | null>(null);
   const [verdicts, setVerdicts] = useState<VerdictMap>({});
   const [points, setPoints] = useState(0);
@@ -30,14 +32,23 @@ export default function Jogar() {
   useEffect(() => {
     setPid(getOrCreateParticipantId());
     setShowTutorial(!hasSeen());
+    const saved = typeof window !== "undefined" ? localStorage.getItem("atos-domain") : null;
+    if (saved) setDomain(saved);
   }, []);
 
-  useEffect(() => { if (pid) loadNext(pid); }, [pid]);
+  // reload whenever the participant or the chosen domain changes
+  useEffect(() => { if (pid) loadNext(pid); }, [pid, domain]);
 
   async function loadNext(p: string) {
-    const r = await fetch(`/api/next-item?participant=${p}`).then((x) => x.json());
+    const qs = `participant=${p}${domain ? `&source=${encodeURIComponent(domain)}` : ""}`;
+    const r = await fetch(`/api/next-item?${qs}`).then((x) => x.json());
     setItem(r.item ?? null);
     setVerdicts({});
+  }
+
+  function changeDomain(v: string) {
+    setDomain(v);
+    if (typeof window !== "undefined") localStorage.setItem("atos-domain", v);
   }
 
   const allAnswered =
@@ -100,7 +111,14 @@ export default function Jogar() {
     });
   }
 
-  if (!item) return <EmptyState points={points} sessionCount={sessionCount} />;
+  if (!item)
+    return (
+      <EmptyState
+        points={points}
+        sessionCount={sessionCount}
+        filter={<DomainFilter value={domain} onChange={changeDomain} />}
+      />
+    );
 
   return (
     <>
@@ -108,6 +126,7 @@ export default function Jogar() {
       <main style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", padding: "0 24px 80px" }}>
         <GameHeader sessionCount={sessionCount} points={points} streak={streak} pointsAnimate={pointsAnimate} streakAnimate={streakAnimate} floats={floats} />
         <div style={{ width: "100%", maxWidth: 680 }}>
+          <DomainFilter value={domain} onChange={changeDomain} />
           <InlineSentence text={item.text} spans={item.spans} />
           <div style={{ display: "flex", flexDirection: "column", gap: 16, marginBottom: 28 }}>
             {item.spans.map((s, i) => (

@@ -1,11 +1,13 @@
 "use client";
+import { ReactNode } from "react";
 
 interface Props {
   points: number;
   sessionCount: number;
+  filter?: ReactNode;
 }
 
-export default function EmptyState({ points, sessionCount }: Props) {
+export default function EmptyState({ points, sessionCount, filter }: Props) {
   const label = sessionCount === 1 ? "frase avaliada" : "frases avaliadas";
   return (
     <main
@@ -19,6 +21,7 @@ export default function EmptyState({ points, sessionCount }: Props) {
         textAlign: "center",
       }}
     >
+      {filter}
       <h2 className="display" style={{ fontSize: 36, marginBottom: 16 }}>
         Valeu! 🙌
       </h2>

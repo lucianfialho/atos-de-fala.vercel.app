@@ -3,17 +3,28 @@ import { sql } from "@/lib/db";
 import { pickNextItem, Candidate } from "@/lib/serving";
 
 export async function GET(req: Request) {
-  const participant = new URL(req.url).searchParams.get("participant");
+  const params = new URL(req.url).searchParams;
+  const participant = params.get("participant");
+  const source = params.get("source");
   if (!participant) return NextResponse.json({ error: "participant required" }, { status: 400 });
 
-  const rows = (await sql`
-    select i.id, i.is_honeypot, i.priority,
-           (select count(*) from vote v join item_span s on s.id = v.item_span_id where s.item_id = i.id) as vote_count
-    from item i
-    where not exists (
+  // Optional domain filter (review/sac/entrevista/synthetic). Honeypots stay in the pool even
+  // when filtered, so the every-7th quality-control check keeps working in a focused session.
+  const args: (string)[] = [participant];
+  let where = `not exists (
       select 1 from vote v join item_span s on s.id = v.item_span_id
-      where s.item_id = i.id and v.participant_id = ${participant}
-    )`) as { id: number; is_honeypot: boolean; priority: number; vote_count: number }[];
+      where s.item_id = i.id and v.participant_id = $1
+    )`;
+  if (source) {
+    args.push(source);
+    where += ` and (i.source = $2 or i.is_honeypot)`;
+  }
+  const rows = (await sql.query(
+    `select i.id, i.is_honeypot, i.priority,
+            (select count(*) from vote v join item_span s on s.id = v.item_span_id where s.item_id = i.id) as vote_count
+     from item i where ${where}`,
+    args
+  )) as { id: number; is_honeypot: boolean; priority: number; vote_count: number }[];
 
   const candidates: Candidate[] = rows.map((r) => ({
     id: r.id,
