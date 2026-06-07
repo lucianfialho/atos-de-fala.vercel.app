@@ -7,6 +7,7 @@ import Tutorial, { hasSeen } from "./components/Tutorial";
 import GameHeader from "./components/GameHeader";
 import EmptyState from "./components/EmptyState";
 import DomainFilter from "./components/DomainFilter";
+import DomainGoals from "./components/DomainGoals";
 import JogarReannotate from "./components/JogarReannotate";
 
 type Span = { id: number; char_start: number; char_end: number; ai_act: string };
@@ -119,7 +120,12 @@ export default function Jogar() {
       <EmptyState
         points={points}
         sessionCount={sessionCount}
-        filter={<DomainFilter value={domain} onChange={changeDomain} />}
+        filter={
+          <div style={{ width: "100%", maxWidth: 680 }}>
+            <DomainFilter value={domain} onChange={changeDomain} />
+            <DomainGoals version={sessionCount} onPick={changeDomain} />
+          </div>
+        }
       />
     );
 
@@ -130,6 +136,7 @@ export default function Jogar() {
         <GameHeader sessionCount={sessionCount} points={points} streak={streak} pointsAnimate={pointsAnimate} streakAnimate={streakAnimate} floats={floats} />
         <div style={{ width: "100%", maxWidth: 680 }}>
           <DomainFilter value={domain} onChange={changeDomain} />
+          <DomainGoals version={sessionCount} onPick={changeDomain} />
           <InlineSentence text={item.text} spans={item.spans} />
           {remark ? (
             <JogarReannotate
