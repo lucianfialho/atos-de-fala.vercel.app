@@ -7,9 +7,10 @@ import Tutorial, { hasSeen } from "./components/Tutorial";
 import GameHeader from "./components/GameHeader";
 import EmptyState from "./components/EmptyState";
 import DomainFilter from "./components/DomainFilter";
+import JogarReannotate from "./components/JogarReannotate";
 
 type Span = { id: number; char_start: number; char_end: number; ai_act: string };
-type Item = { id: number; text: string; spans: Span[] };
+type Item = { id: number; text: string; source?: string; spans: Span[] };
 type VerdictState = { verdict: "agree" | "disagree" | "skip"; correctedAct?: string };
 type VerdictMap = Record<number, VerdictState>;
 
@@ -17,6 +18,7 @@ export default function Jogar() {
   const [pid, setPid] = useState<string>("");
   const [domain, setDomain] = useState<string>("");
   const [item, setItem] = useState<Item | null>(null);
+  const [remark, setRemark] = useState(false);
   const [verdicts, setVerdicts] = useState<VerdictMap>({});
   const [points, setPoints] = useState(0);
   const [streak, setStreak] = useState(0);
@@ -44,6 +46,7 @@ export default function Jogar() {
     const r = await fetch(`/api/next-item?${qs}`).then((x) => x.json());
     setItem(r.item ?? null);
     setVerdicts({});
+    setRemark(false);
   }
 
   function changeDomain(v: string) {
@@ -128,19 +131,36 @@ export default function Jogar() {
         <div style={{ width: "100%", maxWidth: 680 }}>
           <DomainFilter value={domain} onChange={changeDomain} />
           <InlineSentence text={item.text} spans={item.spans} />
-          <div style={{ display: "flex", flexDirection: "column", gap: 16, marginBottom: 28 }}>
-            {item.spans.map((s, i) => (
-              <SpanCard key={s.id} s={s} spanIndex={i} text={item.text} verdicts={verdicts} setVerdicts={setVerdicts} onSuggest={suggest} />
-            ))}
-          </div>
-          {!allAnswered && (
-            <p style={{ fontSize: 13, color: "var(--muted)", textAlign: "center", marginBottom: 12 }}>
-              Escolha uma opção em cada cartão para avançar
-            </p>
+          {remark ? (
+            <JogarReannotate
+              item={item}
+              pid={pid}
+              onAward={(pts) => setPoints((p) => p + pts)}
+              onDone={() => { setSessionCount((c) => c + 1); loadNext(pid); }}
+            />
+          ) : (
+            <>
+              <div style={{ display: "flex", flexDirection: "column", gap: 16, marginBottom: 16 }}>
+                {item.spans.map((s, i) => (
+                  <SpanCard key={s.id} s={s} spanIndex={i} text={item.text} verdicts={verdicts} setVerdicts={setVerdicts} onSuggest={suggest} />
+                ))}
+              </div>
+              <button
+                onClick={() => setRemark(true)}
+                style={{ width: "100%", height: 40, fontSize: 14, marginBottom: 16, background: "transparent", color: "var(--muted)", border: "1px solid var(--hairline)", borderRadius: 10, cursor: "pointer" }}
+              >
+                ✂ está dividido errado? dividir / re-marcar
+              </button>
+              {!allAnswered && (
+                <p style={{ fontSize: 13, color: "var(--muted)", textAlign: "center", marginBottom: 12 }}>
+                  Escolha uma opção em cada cartão para avançar
+                </p>
+              )}
+              <button className="btn-ink" onClick={submit} disabled={!allAnswered} aria-disabled={!allAnswered} style={{ width: "100%", height: 48, fontSize: 16 }}>
+                Próxima →
+              </button>
+            </>
           )}
-          <button className="btn-ink" onClick={submit} disabled={!allAnswered} aria-disabled={!allAnswered} style={{ width: "100%", height: 48, fontSize: 16 }}>
-            Próxima →
-          </button>
         </div>
       </main>
     </>

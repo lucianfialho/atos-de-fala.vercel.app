@@ -38,7 +38,7 @@ export async function GET(req: Request) {
   const pick = pickNextItem(candidates, itemsDone);
   if (!pick) return NextResponse.json({ item: null });
 
-  const item = (await sql`select id, text, is_honeypot from item where id = ${pick.id}`) as any[];
+  const item = (await sql`select id, text, source, is_honeypot from item where id = ${pick.id}`) as any[];
   const spans = await sql`select id, char_start, char_end, ai_act, display_order
                           from item_span where item_id = ${pick.id} order by display_order`;
   return NextResponse.json({ item: { ...item[0], spans } });
