@@ -20,7 +20,7 @@ export default function DomainGoals({
 
   useEffect(() => {
     let alive = true;
-    fetch("/api/progress")
+    fetch("/api/progress", { cache: "no-store" })
       .then((r) => r.json())
       .then((d) => { if (alive) setProg(d.progress ?? {}); })
       .catch(() => {});
@@ -37,8 +37,10 @@ export default function DomainGoals({
       {GOAL_ORDER.map((src) => {
         const g = GOALS[src];
         const p = prog[src] ?? { total: 0, voted: 0, consensus: 0 };
-        const { target, level } = goalFor(p.consensus);
-        const pct = Math.min(100, Math.round((p.consensus / target) * 100));
+        // Bar tracks the player's own contribution (voted) so it moves every vote; consensus
+        // (needs ≥2 people on an item) is the quality gate shown as the "pronto pro eval" mark.
+        const { target, level } = goalFor(p.voted);
+        const pct = Math.min(100, Math.round((p.voted / target) * 100));
         const evalReady = p.consensus >= EVAL_READY;
         return (
           <button
@@ -58,7 +60,7 @@ export default function DomainGoals({
                 {evalReady && <span style={{ fontSize: 11, color: "#3a7d44" }}>✓ pronto pro eval</span>}
               </span>
               <span style={{ color: "var(--muted)", whiteSpace: "nowrap" }}>
-                {p.consensus}/{target} <span style={{ opacity: 0.7 }}>· {p.voted} votados</span>
+                {p.voted}/{target} <span style={{ opacity: 0.7 }}>· {p.consensus} c/ consenso</span>
               </span>
             </div>
             <div style={{ height: 6, borderRadius: 999, background: "var(--hairline)", overflow: "hidden" }}>
@@ -68,8 +70,8 @@ export default function DomainGoals({
         );
       })}
       <div style={{ fontSize: 11, color: "var(--muted)" }}>
-        Meta = itens com consenso (≥2 votos no mesmo item). Bate 30 → pronto pro eval; daí sobe de
-        nível (90, 180…) pra continuar ajudando. Precisa de gente votando os mesmos itens.
+        A barra é a sua contribuição (sobe a cada marcação, nível 30→90→180…). Vira ✓ pronto pro
+        eval quando 30 itens têm consenso — ≥2 pessoas no mesmo item. Por isso vale chamar gente.
       </div>
     </div>
   );

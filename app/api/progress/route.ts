@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 import { CONSENSUS_VOTES } from "@/lib/goals";
 
+// progress changes with every vote — never serve a cached/static response
+export const dynamic = "force-dynamic";
+
 // Per-domain collection progress for the /jogar goal bars: how many items are voted (≥1) and
 // how many have reached consensus (≥ CONSENSUS_VOTES). Drives the "meta por categoria" UI.
 export async function GET() {
