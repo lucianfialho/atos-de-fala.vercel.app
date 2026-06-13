@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Sans } from "next/font/google";
 import Script from "next/script";
+import ConsentBanner from "./components/ConsentBanner";
+import SpaPageView from "./components/SpaPageView";
 import "./globals.css";
 
 const GTM_ID = "GTM-NG6V826R";
@@ -39,6 +41,16 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR" className={plex.variable}>
+      {/* Consent Mode v2 — default DENIED, must run BEFORE GTM (docs/datalayer.md §6, LGPD #1) */}
+      <Script
+        id="consent-default"
+        strategy="beforeInteractive"
+        dangerouslySetInnerHTML={{
+          __html: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}
+gtag('consent','default',{ad_storage:'denied',ad_user_data:'denied',ad_personalization:'denied',analytics_storage:'denied',wait_for_update:500});
+try{if(localStorage.getItem('atos-analytics-consent')==='granted'){gtag('consent','update',{analytics_storage:'granted'});}}catch(e){}`,
+        }}
+      />
       {/* Google Tag Manager */}
       <Script
         id="gtm"
@@ -63,7 +75,9 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
           />
         </noscript>
         {/* End Google Tag Manager (noscript) */}
+        <SpaPageView />
         {children}
+        <ConsentBanner />
       </body>
     </html>
   );

@@ -14,8 +14,20 @@ interface Props {
 }
 
 export default function OnboardingForm({ f, setF, consent, setConsent, ready, onStart }: Props) {
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    // real <form> submit (so GTM's Form Submission trigger fires); SPA -> no reload
+    e.preventDefault();
+    if (ready) onStart();
+  }
+
   return (
-    <div className="card" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+    <form
+      id="onboarding-form"
+      name="onboarding"
+      onSubmit={handleSubmit}
+      className="card"
+      style={{ display: "flex", flexDirection: "column", gap: 20 }}
+    >
       <p className="label" style={{ marginBottom: 4 }}>Sobre você</p>
 
       <div className="field">
@@ -73,13 +85,13 @@ export default function OnboardingForm({ f, setF, consent, setConsent, ready, on
       </label>
 
       <button
+        type="submit"
         className="btn-ink"
         disabled={!ready}
-        onClick={onStart}
         style={{ marginTop: 8, width: "100%", height: 48, fontSize: 16 }}
       >
         Começar
       </button>
-    </div>
+    </form>
   );
 }
