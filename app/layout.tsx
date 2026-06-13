@@ -3,6 +3,7 @@ import { IBM_Plex_Sans } from "next/font/google";
 import Script from "next/script";
 import ConsentBanner from "./components/ConsentBanner";
 import SpaPageView from "./components/SpaPageView";
+import ScrollDepth from "./components/ScrollDepth";
 import "./globals.css";
 
 const GTM_ID = "GTM-NG6V826R";
@@ -76,6 +77,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
         </noscript>
         {/* End Google Tag Manager (noscript) */}
         <SpaPageView />
+        <ScrollDepth />
         {children}
         <ConsentBanner />
       </body>

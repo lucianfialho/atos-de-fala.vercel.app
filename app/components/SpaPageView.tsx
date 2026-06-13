@@ -17,6 +17,12 @@ export default function SpaPageView() {
       page_title: typeof document !== "undefined" ? document.title : "",
       section: sectionFor(pathname),
     });
+    // dedicated route-level events (docs/datalayer.md §4 Nano)
+    if (pathname.startsWith("/sobre")) dlPush({ event: "view_about" });
+    else if (pathname.startsWith("/painel")) dlPush({ event: "view_dashboard" });
+    else if (pathname.startsWith("/termo")) dlPush({ event: "view_terms" });
+    else if (pathname.startsWith("/jogar") || pathname.startsWith("/assistir"))
+      dlPush({ event: "section_view", section: "anotar" });
   }, [pathname]);
   return null;
 }

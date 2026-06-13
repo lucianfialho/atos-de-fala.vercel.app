@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { getOrCreateParticipantId } from "@/lib/participant";
 import { dlPush, regionFromUf } from "@/lib/dataLayer";
 import OnboardingForm from "@/app/components/OnboardingForm";
+import SectionViewOnce from "@/app/components/SectionViewOnce";
 import Nav from "@/app/components/Nav";
 import GoalBar from "@/app/components/GoalBar";
 import HowItWorks from "@/app/components/HowItWorks";
@@ -113,6 +114,7 @@ export default function LandingPage() {
 
         {/* ── 5. Participar ──────────────────────────────────────────── */}
         <section id="participar" className="lp-section lp-section-tinted">
+          <SectionViewOnce section="participar" />
           <div className="lp-center" style={{ maxWidth: 560 }}>
             <p className="label lp-eyebrow" style={{ textAlign: "center" }}>PARTICIPAR</p>
             <p style={{ fontSize: 16, color: "var(--muted)", textAlign: "center", marginBottom: 32, lineHeight: 1.6 }}>

@@ -1,4 +1,5 @@
 import ForgetLink from "./ForgetLink";
+import ModelTestLink from "./ModelTestLink";
 
 export default function Footer() {
   const year = new Date().getFullYear();
@@ -24,12 +25,12 @@ export default function Footer() {
 
           <nav className="lp-footer-col" aria-label="Recursos">
             <p className="label lp-footer-col-head">RECURSOS</p>
-            <a href="https://huggingface.co/lucianfialho/atos-de-fala-ptbr" target="_blank" rel="noopener noreferrer">
+            <ModelTestLink href="https://huggingface.co/lucianfialho/atos-de-fala-ptbr">
               Modelo (Hugging Face)
-            </a>
-            <a href="https://huggingface.co/spaces/lucianfialho/atos-de-fala-ptbr" target="_blank" rel="noopener noreferrer">
+            </ModelTestLink>
+            <ModelTestLink href="https://huggingface.co/spaces/lucianfialho/atos-de-fala-ptbr">
               Demo (Space)
-            </a>
+            </ModelTestLink>
             <a href="https://github.com/lucianfialho/atos-de-fala" target="_blank" rel="noopener noreferrer">
               Código (GitHub)
             </a>

@@ -1,3 +1,5 @@
+import ModelTestLink from "@/app/components/ModelTestLink";
+
 const H2_STYLE: React.CSSProperties = {
   fontSize: "clamp(18px, 2.5vw, 22px)",
   marginBottom: 12,
@@ -81,24 +83,20 @@ export function SobreSections() {
             </a>
           </li>
           <li style={{ marginBottom: 8 }}>
-            <a
+            <ModelTestLink
               href="https://huggingface.co/lucianfialho/atos-de-fala-ptbr"
               style={LINK_STYLE}
-              target="_blank"
-              rel="noopener noreferrer"
             >
               Modelo no Hugging Face
-            </a>
+            </ModelTestLink>
           </li>
           <li style={{ marginBottom: 8 }}>
-            <a
+            <ModelTestLink
               href="https://huggingface.co/spaces/lucianfialho/atos-de-fala-ptbr"
               style={LINK_STYLE}
-              target="_blank"
-              rel="noopener noreferrer"
             >
               Demo (Space)
-            </a>
+            </ModelTestLink>
           </li>
           <li>
             Dataset: será publicado sob licença CC BY 4.0 quando houver volume.

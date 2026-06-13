@@ -1,4 +1,5 @@
 import { Underline, CircleScribble } from "@/app/components/marks";
+import ModelTestLink from "@/app/components/ModelTestLink";
 
 const HF_SPACE = "https://huggingface.co/spaces/lucianfialho/atos-de-fala-ptbr";
 const HF_MODEL = "https://huggingface.co/lucianfialho/atos-de-fala-ptbr";
@@ -12,9 +13,9 @@ export function OpenStrip() {
         <span className="lp-open-item">dataset aberto</span>
         <span className="lp-open-sep" aria-hidden="true">·</span>
         <span className="lp-open-item">
-          <a href={HF_MODEL} target="_blank" rel="noopener noreferrer" className="lp-open-link">
+          <ModelTestLink href={HF_MODEL} className="lp-open-link">
             modelo aberto
-          </a>
+          </ModelTestLink>
         </span>
       </div>
     </div>
