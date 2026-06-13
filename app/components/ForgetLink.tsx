@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { getExistingParticipantId, clearParticipantId } from "@/lib/participant";
+import { dlPush } from "@/lib/dataLayer";
 
 // "Esquecer meus dados" — deletes everything tied to this browser's anonymous id (LGPD).
 export default function ForgetLink() {
@@ -17,6 +18,7 @@ export default function ForgetLink() {
         body: JSON.stringify({ participant: id }),
       });
       if (!r.ok) throw new Error();
+      dlPush({ event: "data_forget" }); // C0 — fires after real deletion succeeded (no PII)
       clearParticipantId();
       setState("done");
     } catch {

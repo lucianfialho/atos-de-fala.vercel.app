@@ -38,6 +38,19 @@ export function getStoredConsent(): "granted" | "denied" | null {
   }
 }
 
+// UF -> Brazilian macro-region (docs/datalayer.md §5: prefer `region` over `uf` when possible).
+const UF_REGION: Record<string, string> = {
+  AC: "N", AP: "N", AM: "N", PA: "N", RO: "N", RR: "N", TO: "N",
+  AL: "NE", BA: "NE", CE: "NE", MA: "NE", PB: "NE", PE: "NE", PI: "NE", RN: "NE", SE: "NE",
+  DF: "CO", GO: "CO", MT: "CO", MS: "CO",
+  ES: "SE", MG: "SE", RJ: "SE", SP: "SE",
+  PR: "S", RS: "S", SC: "S",
+};
+
+export function regionFromUf(uf: string): string {
+  return UF_REGION[uf] ?? "";
+}
+
 /** Map a route to the contract's `section` enum (docs/datalayer.md §4). */
 export function sectionFor(pathname: string): string {
   if (pathname === "/") return "participar";

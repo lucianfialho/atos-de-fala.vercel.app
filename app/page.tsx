@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getOrCreateParticipantId } from "@/lib/participant";
+import { dlPush, regionFromUf } from "@/lib/dataLayer";
 import OnboardingForm from "@/app/components/OnboardingForm";
 import Nav from "@/app/components/Nav";
 import GoalBar from "@/app/components/GoalBar";
@@ -17,10 +18,44 @@ export default function LandingPage() {
   const [f, setF] = useState({ ageBand: "", gender: "", region: "", education: "" });
   const [consent, setConsent] = useState(false);
   const ready = consent && f.ageBand && f.gender && f.region && f.education;
+  const startedRef = useRef(false);
+
+  function markSignUpStart() {
+    if (!startedRef.current) {
+      startedRef.current = true;
+      dlPush({ event: "sign_up_start" }); // MICRO: form "Participar" iniciado
+    }
+  }
+
+  function handleSetF(v: typeof f) {
+    markSignUpStart();
+    setF(v);
+  }
+
+  function handleSetConsent(v: boolean) {
+    markSignUpStart();
+    dlPush({ event: "consent_update", consent_type: "open_dataset_ccby", consent_value: v });
+    setConsent(v);
+  }
 
   async function start() {
     const id = getOrCreateParticipantId();
     await fetch("/api/participant", { method: "POST", body: JSON.stringify({ id, ...f }) });
+    // MICRO: anotador ativado. Demografia (C2) vai como USER PROPERTIES — nunca como params do
+    // evento e nunca PII livre. GTM mapeia user_properties->GA4, gated em consent_open_dataset.
+    // O submit só acontece com o consentimento CC BY marcado, logo consent_open_dataset = true.
+    dlPush({
+      event: "sign_up",
+      user_properties: {
+        age_range: f.ageBand,
+        gender: f.gender,
+        uf: f.region,
+        region: regionFromUf(f.region),
+        education_level: f.education,
+        consent_open_dataset: true,
+        annotator_status: "new",
+      },
+    });
     router.push("/jogar");
   }
 
@@ -83,7 +118,7 @@ export default function LandingPage() {
             <p style={{ fontSize: 16, color: "var(--muted)", textAlign: "center", marginBottom: 32, lineHeight: 1.6 }}>
               Anônimo, sem cadastro. Conte um pouco sobre você e comece a jogar.
             </p>
-            <OnboardingForm f={f} setF={setF} consent={consent} setConsent={setConsent} ready={!!ready} onStart={start} />
+            <OnboardingForm f={f} setF={handleSetF} consent={consent} setConsent={handleSetConsent} ready={!!ready} onStart={start} />
           </div>
         </section>
 

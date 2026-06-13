@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { getOrCreateParticipantId } from "@/lib/participant";
+import { dlPush } from "@/lib/dataLayer";
 import SpanCard from "./components/SpanCard";
 import InlineSentence from "./components/InlineSentence";
 import Tutorial, { hasSeen } from "./components/Tutorial";
@@ -31,6 +32,9 @@ export default function Jogar() {
   const floatId = useRef(0);
   const prevPoints = useRef(0);
   const prevStreak = useRef(0);
+  const shownAt = useRef(0);          // when the current item was shown (response_time_ms)
+  const startedRef = useRef(false);   // annotation_start fires once per session
+  const annotationCount = useRef(0);  // cumulative submits -> annotation_index + milestones
 
   useEffect(() => {
     setPid(getOrCreateParticipantId());
@@ -45,9 +49,23 @@ export default function Jogar() {
   async function loadNext(p: string) {
     const qs = `participant=${p}${domain ? `&source=${encodeURIComponent(domain)}` : ""}`;
     const r = await fetch(`/api/next-item?${qs}`).then((x) => x.json());
-    setItem(r.item ?? null);
+    const next = r.item ?? null;
+    setItem(next);
     setVerdicts({});
     setRemark(false);
+    if (next) {
+      shownAt.current = Date.now();
+      if (!startedRef.current) {
+        startedRef.current = true;
+        dlPush({ event: "annotation_start" });
+      }
+      dlPush({
+        event: "annotation_view",
+        item_id: next.id,
+        predicted_act: next.spans[0]?.ai_act,
+        sentence_length: next.text.length,
+      });
+    }
   }
 
   function changeDomain(v: string) {
@@ -62,6 +80,28 @@ export default function Jogar() {
 
   async function submit() {
     if (!item || !allAnswered) return;
+
+    // MACRO: one annotation_submit per judged prediction (span). verdict -> contract enum.
+    // No free text, no PII — only the predicted act label + the user's verdict (docs/datalayer.md §4).
+    const rt = Math.max(0, Math.round(Date.now() - shownAt.current));
+    const verdictMap = { agree: "yes", disagree: "no", skip: "dont_know" } as const;
+    for (const s of item.spans) {
+      const v = verdicts[s.id];
+      if (!v) continue;
+      annotationCount.current += 1;
+      dlPush({
+        event: "annotation_submit",
+        item_id: item.id,
+        predicted_act: s.ai_act,
+        verdict: verdictMap[v.verdict],
+        response_time_ms: rt,
+        annotation_index: annotationCount.current,
+      });
+      if ([10, 25, 50, 100].includes(annotationCount.current)) {
+        dlPush({ event: "annotation_milestone", milestone_count: annotationCount.current });
+      }
+    }
+
     const votes = item.spans
       .filter((s) => verdicts[s.id]?.verdict === "agree" || verdicts[s.id]?.verdict === "disagree")
       .map((s) => ({
@@ -108,6 +148,8 @@ export default function Jogar() {
 
   async function suggest(spanId: number, text: string) {
     if (!text.trim()) return;
+    // MICRO: suggestion bonus — only the LENGTH leaves the client, never the text (LGPD §2).
+    dlPush({ event: "annotation_suggestion", item_id: item?.id, suggestion_length: text.trim().length });
     await fetch("/api/suggestion", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
